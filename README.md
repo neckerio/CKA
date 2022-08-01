@@ -1,7 +1,7 @@
 # CKA
 
 ## Objective
-	* Practice for CKA[^cka]
+	* Practice for CKA [^cka]
 
 ---
 

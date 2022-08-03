@@ -32,10 +32,6 @@ Vagrant.configure("2") do |config|
 
   config.vm.provision "file", source: "/home/vagrant/inventory", destination: "/home/vagrant/" 
 
-  # config.vm.provision "ansible" do |ansible|
-  #   ansible.playbook = "docker.yml"
-  # end
-
   config.vm.provision "ansible" do |ansible|
     ansible.playbook = "cka.yml"
   end

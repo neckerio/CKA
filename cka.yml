@@ -1,0 +1,221 @@
+---
+- name: cka startup packages and echoes
+  hosts: all
+  tasks:
+    - name: apt
+      apt:
+        state: latest
+        name:
+          - python3
+          - gnupg
+          - curl
+
+    - name: lineinfile .bashrc
+      lineinfile:
+        line: "set -o vi"
+        path: /home/vagrant/.bashrc
+        state: present
+
+    - name: lineinfile .vimrc
+      lineinfile:
+        line: "{{ item }}"
+        path: /home/vagrant/.vimrc
+        state: present
+        create: True
+        owner: vagrant
+        group: vagrant
+      loop:
+        - "filetype plugin on"
+        - "autocmd Filetype yaml setlocal ai sw=2 ts=2 et"
+        - "set number relativenumber"
+
+    - name: lineinfile /etc/hosts
+      lineinfile:
+        line: "{{ item }}"
+        path: /etc/hosts
+        state: present
+      loop:
+        - "192.168.56.10  cka1"
+        - "192.168.56.11  cka2"
+        - "192.168.56.12  cka3"
+
+- name: install CRIO runtime
+  environment:
+    VERSION: "1.24"
+    OS: "xUbuntu_20.04"
+  hosts: all
+  tasks:
+    - name: apt libseccomp>=2.4.1
+      apt:
+        state: latest
+        name: libseccomp2
+
+    - name: lineinfile repositories
+      lineinfile:
+        create: True
+        state: present
+        path: "{{ item.path }}"
+        line: "{{ item.line }}"
+      loop:
+        - path: "/etc/apt/sources.list.d/devel:kubic:libcontainers:stable.list"
+          line: "deb [signed-by=/usr/share/keyrings/libcontainers-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ ansible_env.OS }}/ /"
+        - path: "/etc/apt/sources.list.d/devel:kubic:libcontainers:stable:cri-o:{{ ansible_env.VERSION }}.list"
+          line: "deb [signed-by=/usr/share/keyrings/libcontainers-crio-archive-keyring.gpg] https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ ansible_env.VERSION }}/{{ ansible_env.OS }}/ /"
+
+    - name: mkdir keyrings
+      file:
+        state: directory
+        path: /usr/share/keyrings
+
+    - name: uri1, curl gpg key
+      uri:
+        follow_redirects: all
+        timeout: 60
+        return_content: True
+        url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ ansible_env.OS }}/Release.key"
+      register: uri1
+
+    - name: uri2, curl gpg key
+      uri:
+        follow_redirects: all
+        timeout: 60
+        return_content: True
+        url: "https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ ansible_env.VERSION }}/{{ ansible_env.OS }}/Release.key"
+      register: uri2
+
+    - name: shell echo until I figure out how to gpg in Ansible
+      shell:
+        cmd: "{{ item }}"
+      loop:
+        - "echo '{{ uri1.content }}' | gpg --dearmor -o /usr/share/keyrings/libcontainers-archive-keyring.gpg"
+        - "echo '{{ uri2.content }}' | gpg --dearmor -o /usr/share/keyrings/libcontainers-crio-archive-keyring.gpg"
+
+    - name: apt update for new repositories, ~5min
+      apt:
+        update_cache: True
+
+    - name: apt install crio packages, ~5min
+      apt:
+        state: latest
+        name: 
+          - cri-o
+          - cri-o-runc
+          - runc
+
+- name: Post crio install fixes
+  hosts: all
+  tasks:
+    - name: change the default EXEC path in the crio.service
+      lineinfile:
+        path: /etc/systemd/system/cri-o.service
+        line: "{{ item.line }}"
+        regexp: "{{ item.regexp }}"
+      loop:
+        - line: "ExecStart=/usr/bin/crio \\"
+          regexp: "^ExecStart=/usr/local"
+
+    - name: restart crio.service
+      systemd:
+        name: crio
+        state: restarted
+        daemon_reload: True
+
+
+        
+- name: install Kubeadm
+  hosts: all
+  tasks:
+    - name: apt packages
+      apt:
+        state: latest
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+
+    - name: uri, curl google cloud public signing key
+      uri:
+        url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
+        return_content: True
+        follow_redirects: all
+        dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+
+    - name: add k8s apt repository
+      lineinfile:
+        path: /etc/apt/sources.list.d/kubernetes.list
+        create: True
+        line: "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main"
+
+    - name: apt update with k8s repos
+      apt:
+        update_cache: True
+
+    - name: apt k8s packages
+      apt:
+        state: latest
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+
+    - name: dpkg_selection to simulate -- apt-mark hold
+      dpkg_selections:
+        selection: hold
+        name: "{{ item }}"
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+
+        
+
+
+
+
+## Commented out until I figure out how to install ssh-keys for cka1. Maybe a separate
+## script?
+
+# - name: install ssh keys
+#   hosts: all
+#   tasks:
+#     - name: create a directory with proper permissions for keys
+#       file:
+#         state: directory
+#         mode: '0755'
+#         path: /home/vagrant/ssh
+#         owner: vagrant
+#         group: vagrant
+
+#     - name: user ssh-keygen
+#       user:
+#         name: vagrant
+#         state: present
+#         generate_ssh_key: True
+#         ssh_key_comment: "cka1 -> cka2/3"
+#         ssh_key_file: /home/vagrant/ssh
+
+#     - name: chmod pub key
+#       file:
+#         state: touch
+#         path: /home/vagrant/ssh/id_rsa.pub
+#         mode: '0644'
+#         owner: vagrant
+#         group: vagrant
+
+#     - name: chmod priv key
+#       file:
+#         state: touch
+#         path: /home/vagrant/ssh/id_rsa
+#         mode: '0600'
+#         owner: vagrant
+#         group: vagrant
+
+# - name: transfer ssh keys on cka2/3
+#   hosts: all
+#   tasks:
+#     - name: authorized_key and lookup
+#       authorized_key: 
+#         key: "{{ lookup('file', '/home/vagrant/ssh/id_rsa.pub') }}"
+#         user: vagrant
+#         state: present

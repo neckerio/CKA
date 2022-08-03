@@ -4,6 +4,13 @@
 * Practice for CKA[^cka]
 
 ---
+## Setup
+* [Vagrantfile](Vagrantfile)
+* [cka.yml](cka.yml)
+* [ansible.cfg](ansible.cfg)
+* [inventory](inventory)
+
+---
 
 1. Storage (10%)
 	- [ ] Understand storage classes, persistent volumes

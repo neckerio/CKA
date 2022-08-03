@@ -1,0 +1,15 @@
+[cka1]
+192.168.50.10
+
+[cka2]
+192.168.50.11
+
+[cka3]
+192.168.50.12
+
+[remote:children]
+cka2
+cka3
+
+[remote:vars]
+ansible_python_interpreter = /usr/bin/python3

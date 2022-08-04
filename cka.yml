@@ -87,8 +87,8 @@
       shell:
         cmd: "{{ item }}"
       loop:
-        - "echo '{{ uri1.content }}' | gpg --dearmor -o /usr/share/keyrings/libcontainers-archive-keyring.gpg"
-        - "echo '{{ uri2.content }}' | gpg --dearmor -o /usr/share/keyrings/libcontainers-crio-archive-keyring.gpg"
+        - "echo '{{ uri1.content }}' | gpg --dearmor > /usr/share/keyrings/libcontainers-archive-keyring.gpg"
+        - "echo '{{ uri2.content }}' | gpg --dearmor > /usr/share/keyrings/libcontainers-crio-archive-keyring.gpg"
 
     - name: apt update for new repositories, ~5min
       apt:
@@ -133,12 +133,13 @@
           - ca-certificates
           - curl
 
-    - name: uri, curl google cloud public signing key
+    - name: uri, curl google cloud public signing key, accept 200 and 304 Not Modified
       uri:
         url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
         return_content: True
         follow_redirects: all
         dest: /usr/share/keyrings/kubernetes-archive-keyring.gpg
+        status_code: [200, 304]
 
     - name: add k8s apt repository
       lineinfile:
@@ -166,6 +167,65 @@
         - kubelet
         - kubeadm
         - kubectl
+
+- name: Initialize Control Plane, Install CNI (Cilium) and Deploy Cluster
+  hosts: all
+  tasks:
+    - name: command, swapoff
+      command:
+        cmd: "swapoff -a"
+
+    - name: lineinfile, comment out swap in /etc/fstab
+      lineinfile:
+        state: present
+        backrefs: True
+        path: /etc/fstab
+        line: '# \1'
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+
+    - name: lineinfile, set up ipv4 and let ip tables see bridged traffic
+      lineinfile:
+        line: "{{ item }}"
+        path: /etc/modules-load.d/k8s.conf
+        create: True
+        state: present
+      loop:
+        - "overlay"
+        - "br_netfilter"
+          
+    - name: modprobe, overlay and br_netfilter; runtime prerequisite
+      modprobe:
+        state: present
+        name: "{{ item }}"
+      loop:
+        - "overlay"
+        - "br_netfilter"
+
+    - name: sysctl drop in, runtime prerequisites
+      sysctl:
+        state: present
+        name: "{{ item }}"
+        sysctl_set: True
+        value: '1'
+        reload: True
+        sysctl_file: /etc/sysctl.d/k8s.conf
+      loop:
+        - "net.bridge.bridge-nf-call-iptables"
+        - "net.bridge.bridge-nf-call-ip6tables"
+        - "net.ipv4.ip_forward"
+
+    # - name: command, initialize kubeadm init and skip kubeproxy ~5min
+    #   command:
+    #     cmd: "kubeadm init --skip-phases=addon/kube-proxy"
+    #   register: kubeadm
+
+    # - name: debugging
+    #   debug:
+    #     var: kubeadm
+
+# Need to figure out janky ansible provisioner for Ansible to go further. Missing tools to make life simpler
+
+    
 
 
         

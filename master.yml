@@ -1,0 +1,98 @@
+---
+- name: start up for master node
+  hosts: all
+  tasks:
+		- name: command, initialize kubeadm init and skip kubeproxy ~5min
+      command:
+        cmd: "kubeadm init --skip-phases=addon/kube-proxy"
+      register: kubeadm
+
+  - name: transfer kube config to /home to avoid sudo
+    file:
+      state: directory
+      path: /home/vagrant/.kube
+      owner: vagrant
+      group: vagrant
+
+  - name: cp config from /etc/kubernetes/admin.conf
+    copy:
+      src: /etc/kubernetes/admin.conf
+      dest: /home/vagrant/.kube/config
+      owner: vagrant
+      group: vagrant
+
+  - name: add kubectl auto complete for bash
+    lineinfile:
+      line: "{{ item }}"
+      state: present
+      path: /home/vagrant/.bashrc
+    loop:
+      - "source /usr/share/bash-completion/bash_completion"
+      - "source <(kubectl completion bash)"
+      - "alias k=kubectl"
+      - "complete -o default -F __start_kubectl k"
+
+  - name: uri, get helm
+    uri:
+      follow_redirects: all
+      timeout: 60
+      return_content: True
+      url: "https://baltocdn.com/helm/signing.asc"
+      dest: /usr/share/keyrings/helm.gpg
+    register: helm
+
+  - name: shell, echo redirect until I figure out how to gpg in ansible
+    shell:
+      cmd: "echo '{{ helm.content }}' | gpg --dearmor > /usr/share/keyrings/helm.gpg"
+
+  - name: apt, a package before helm
+    apt:
+      name: apt-transport-https
+      state: latest
+
+  - name: lineinfile, add repo for helm
+    lineinfile:
+      line: "deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main"
+      path: /etc/apt/sources.list.d/helm-stable-debian.list
+      create: True
+      
+  - name: apt update, helm
+    apt:
+      update_cache: True
+
+  - name: apt install, helm
+    apt:
+      state: latest
+      name: helm
+
+  - name: install kubernetes collection
+    command:
+      cmd: "ansible-galaxy collection install kubernetes.core"
+
+  - name: helm_repository, add cilium repo
+    kubernetes.core.helm_repository:
+      name: cilium
+      repo_url: "https://helm.cilium.io/"
+
+  - name: helm, install cilium
+    kubernetes.core.helm:
+      name: cilium
+      chart_ref: cilium/cilium
+      chart_version: 1.12.0
+      namespace: kube-system
+      values:
+        global:
+          kubeProxyReplacement: strict
+          k8sServiceHost: 192.168.56.10
+          k8sServicePort: 6443
+
+
+# it is breaking on the last one
+
+# Get --token with kubeadm token list
+# Get --discovery-token-ca-cert-hash with openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | \
+#    openssl dgst -sha256 -hex | sed 's/^.* //'
+# IPADDR:PORT
+
+
+

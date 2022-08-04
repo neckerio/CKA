@@ -37,6 +37,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * Disable all swap, comment out the /etc/fstab line to persist
 * (optional) Parallelize token distribution for easier automation, this option has relaxed security guarantees because it doesn't allow the root CA hash to be validated with --discovery-token-ca-cert-hash
 * --discovery-token-unsafe-skip-ca-verification (unsafe skip)
+* It is VITAL to either cp the kubectl admin.conf or use the evironment variable as specified in the output, or kubectl will give an error (can't connect to localhost 8080), whether run as sudo or not
 
 #### add kubectl completion for bash[^kubectl_comp]
 
@@ -51,6 +52,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * kubeadm join
 * to get the --discovery-token-ca-cert-hash:
 	* openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
+* kubectl version (will show client/server version; server version is for configured control-planes)
 
 ### Useful Directories/Files
 * /etc/systemd/system/cri-o.service

@@ -36,18 +36,29 @@ kubectl --kubeconfig ./admin.conf proxy
 #### kubeadm init & cni install
 * Disable all swap, comment out the /etc/fstab line to persist
 * (optional) Parallelize token distribution for easier automation, this option has relaxed security guarantees because it doesn't allow the root CA hash to be validated with --discovery-token-ca-cert-hash
+* --discovery-token-unsafe-skip-ca-verification (unsafe skip)
+
+#### add kubectl completion for bash[^kubectl_comp]
+
+#### install helm
+* use package managers or shell scripts[^helm]
+
 
 ### Useful Commands
 * kubeadm init (--skip-phases=addon/kube-proxy) for cilium
 * kubeadm reset
 * kubeadm token (list)
 * kubeadm join
+* to get the --discovery-token-ca-cert-hash:
+	* openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'
 
 ### Useful Directories/Files
 * /etc/systemd/system/cri-o.service
 * /var/run/crio/crio.sock
 * /etc/crio/crio.conf
 * /etc/crio/crio.conf.d/(drop in .conf)
+* /etc/kubernetes/admin.conf
+* ~/.kube/config (alt to above)
 
 ### Useful Packages
 * apt-transport-https
@@ -72,5 +83,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * CNI on [github](https://github.com/containernetworking/cni)
 * [Cilium](https://github.com/cilium/cilium) on github
 * Instruction to [install Cilium](https://docs.cilium.io/en/stable/gettingstarted/) and [installation using Kubeadm](https://docs.cilium.io/en/stable/gettingstarted/k8s-install-kubeadm/) are in the Advanced installation settings, as well as installing [Kubernetes without Kubeproxy](https://docs.cilium.io/en/stable/gettingstarted/kubeproxy-free/#kubeproxy-free)
+* Instructions for [Kubectl autocompletion](https://kubernetes.io/docs/tasks/tools/install-kubectl-linux/)[^kubectl_comp]
+* Instructions to [install Helm](https://helm.sh/docs/intro/install/)
 
 ---

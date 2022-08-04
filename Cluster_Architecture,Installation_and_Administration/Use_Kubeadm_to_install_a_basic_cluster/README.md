@@ -32,6 +32,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * --apiserver-advertise-address=<ip-address> -- specify IP
 * ensure "Forwarding IPv4 and letting iptables see bridged traffic" are set[^runtime_prerequisites]
 * set systemd cgroup driver; CRI-O uses it by default[^runtime_prerequisites]
+* only use "--skip-phases=addon/kube-proxy --apiserver-advertise-address=<ip>" when using Cilium with kube-proxy replacement
 
 #### kubeadm init & cni install
 * Disable all swap, comment out the /etc/fstab line to persist
@@ -43,6 +44,9 @@ kubectl --kubeconfig ./admin.conf proxy
 
 #### install helm
 * use package managers or shell scripts[^helm]
+* Verify that the cilium agent is running in the desired mode
+	* kubectl -n kube-system exec ds/cilium -- cilium status | grep KubeProxyReplacement
+	* --verbose (option)
 
 
 ### Useful Commands

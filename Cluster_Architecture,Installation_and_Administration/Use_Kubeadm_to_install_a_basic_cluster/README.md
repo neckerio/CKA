@@ -33,6 +33,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * ensure "Forwarding IPv4 and letting iptables see bridged traffic" are set[^runtime_prerequisites]
 * set systemd cgroup driver; CRI-O uses it by default[^runtime_prerequisites]
 * only use "--skip-phases=addon/kube-proxy --apiserver-advertise-address=<ip>" when using Cilium with kube-proxy replacement
+* 
 
 #### kubeadm init & cni install
 * Disable all swap, comment out the /etc/fstab line to persist
@@ -76,6 +77,7 @@ kubectl --kubeconfig ./admin.conf proxy
 * cri-o
 * cri-o-runc (runtime, didn't work defaulted to regular runc)
 * runc
+* bash-completion (for kubectl)
 
 ---
 

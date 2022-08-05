@@ -1,11 +1,11 @@
 [cka1]
-192.168.50.10
+192.168.56.10
 
 [cka2]
-192.168.50.11
+192.168.56.11
 
 [cka3]
-192.168.50.12
+192.168.56.12
 
 [remote:children]
 cka2
@@ -13,3 +13,4 @@ cka3
 
 [remote:vars]
 ansible_python_interpreter = /usr/bin/python3
+ansible_ssh_private_key_file = /home/vagrant/.ssh/id_rsa

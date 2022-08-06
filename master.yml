@@ -4,7 +4,7 @@
   tasks:
 		- name: command, initialize kubeadm init and skip kubeproxy ~5min
       command:
-        cmd: "kubeadm init --skip-phases=addon/kube-proxy"
+        cmd: "kubeadm init --skip-phases=addon/kube-proxy --apiserver-advertise-address=192.168.56.10"
       register: kubeadm
 
   - name: transfer kube config to /home to avoid sudo

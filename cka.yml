@@ -2,6 +2,27 @@
 - name: cka startup packages and echoes
   hosts: all
   tasks:
+- name: Initialize Control Plane, Install CNI (Cilium) and Deploy Cluster
+  hosts: all
+  tasks:
+    - name: command, swapoff
+      command:
+        cmd: "swapoff -a"
+
+    - name: lineinfile, comment out swap in /etc/fstab
+      lineinfile:
+        state: present
+        backrefs: True
+        path: /etc/fstab
+        line: '# \1'
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+
+    - name: remove swap partition, swapoff /etc/fstab don't work... somehow?
+      parted:
+        number: 3
+        state: absent
+        device: /dev/vda
+
     - name: apt
       apt:
         state: latest
@@ -168,20 +189,6 @@
         - kubeadm
         - kubectl
 
-- name: Initialize Control Plane, Install CNI (Cilium) and Deploy Cluster
-  hosts: all
-  tasks:
-    - name: command, swapoff
-      command:
-        cmd: "swapoff -a"
-
-    - name: lineinfile, comment out swap in /etc/fstab
-      lineinfile:
-        state: present
-        backrefs: True
-        path: /etc/fstab
-        line: '# \1'
-        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
 
     - name: lineinfile, set up ipv4 and let ip tables see bridged traffic
       lineinfile:

@@ -1,11 +1,12 @@
 ---
 - name: start up for master node
   hosts: all
+  connection: local
   tasks:
-		- name: command, initialize kubeadm init and skip kubeproxy ~5min
-      command:
-        cmd: "kubeadm init --skip-phases=addon/kube-proxy --apiserver-advertise-address=192.168.56.10"
-      register: kubeadm
+	- name: command, initialize kubeadm init and skip kubeproxy ~5min
+    command:
+      cmd: "kubeadm init --skip-phases=addon/kube-proxy --apiserver-advertise-address=192.168.56.10"
+    register: kubeadm
 
   - name: transfer kube config to /home to avoid sudo
     file:
@@ -31,6 +32,10 @@
       - "source <(kubectl completion bash)"
       - "alias k=kubectl"
       - "complete -o default -F __start_kubectl k"
+
+  - name: shell, source .bashrc
+    shell:
+      cmd: "source /home/vagrant/.bashrc"
 
   - name: uri, get helm
     uri:
@@ -74,17 +79,21 @@
       name: cilium
       repo_url: "https://helm.cilium.io/"
 
-  - name: helm, install cilium
-    kubernetes.core.helm:
-      name: cilium
-      chart_ref: cilium/cilium
-      chart_version: 1.12.0
-      namespace: kube-system
-      values:
-        global:
-          kubeProxyReplacement: strict
-          k8sServiceHost: 192.168.56.10
-          k8sServicePort: 6443
+  # - name: helm, install cilium
+  #   kubernetes.core.helm:
+  #     name: cilium
+  #     chart_ref: cilium/cilium
+  #     chart_version: 1.12.0
+  #     namespace: kube-system
+  #     values:
+  #       global:
+  #         kubeProxyReplacement: strict
+  #         k8sServiceHost: 192.168.56.10
+  #         k8sServicePort: 6443
+
+  - name: kubeadm join credentials
+    debug:
+      msg: "{{ kubeadm.stdout }}"
 
 
 # it is breaking on the last one
